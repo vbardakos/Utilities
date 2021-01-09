@@ -1,8 +1,9 @@
 import os
 from os import PathLike
-from typing import Optional, List, Union, Any, Type
+from functools import wraps
+from typing import Optional, List, Union, Any
 from Utilities.input.archive.factory import factory
-from Utilities.types import ArchiveFileType
+from Utilities.base import ArchiveFileType
 
 
 class FileException(Exception):
@@ -30,26 +31,45 @@ class ArchiveFile(ArchiveFileType):
         self.new = os.path.abspath(os.path.join(self.pth, os.pardir))
         self.pwd = pwd
 
-    def extract(self, members: Optional[List[str]] = None,
-                to_path: Optional[PathLike] = None) -> None:
-        self.mbr = members
-        self.new = to_path if to_path else self.new
-        extractor = factory[self.format]
-        extractor.extract(self)
+    def extractor(func):
+        """ Method Extraction Decorator """
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            extractor = factory[self.format]
+            method = func.__name__
+            return extractor.__getattribute__(method)(self)
+        return wrapper
 
-    @property
-    def inspect(self):
+    def set_read_mode(self, option: bool):
         extractor = factory[self.format]
-        return extractor.inspect(self)
+        return extractor.set_read_mode(option)
 
     @property
     def format(self) -> str:
-        for key, cls in factory.items():
-            if cls.compatible_with(self):
-                return key
-        else:
-            raise ValueError('Format is not supported')
+        if not self.fmt:
+            for key, cls in factory.items():
+                if cls.compatible_with(self):
+                    self.fmt = key
+                    break
+            else:
+                raise ValueError('Format is not supported')
+        return self.fmt
 
     @property
     def supported_formats(self) -> str:
         return str(factory)
+
+    @extractor
+    def extract(self, members: Optional[List[str]] = None,
+                to_path: Optional[PathLike] = None):
+        self.mbr = members
+        self.new = to_path if to_path else self.new
+
+    @property
+    @extractor
+    def inspect(self): return None
+
+    @property
+    @extractor
+    def size(self): return None

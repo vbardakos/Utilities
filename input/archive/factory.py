@@ -1,9 +1,10 @@
-from Utilities.types import FactoryType, ArchiveFileType, ArchiverType
+from Utilities.base import FactoryType, ArchiveFileType, ArchiverType
 from typing import Union
 import json
 
 
 class ArchiveFactory(FactoryType):
+    """ FactoryType object to assist future updates and implementation. """
 
     def register(self, key: Union[str, None], archiver: object):
         super(ArchiveFactory, self).__setitem__(key, archiver)
@@ -11,7 +12,8 @@ class ArchiveFactory(FactoryType):
     def set_config(self, config: dict):
         self.data = config
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """ String in json format """
         def _mapper(kv):
             k, v = kv
             return k, {'name': v.__class__.__name__, 'id': id(v)}
@@ -24,6 +26,7 @@ factory: ArchiveFactory
 
 
 class ArchiveFinder(ArchiverType):
+    """ It finds the proper archiver class """
 
     def get_val(self, archive: ArchiveFileType) -> ArchiverType:
         return factory[self.get_key(archive)]
@@ -45,7 +48,8 @@ class ArchiveFinder(ArchiverType):
         return func._inspect_method(archive)
 
     def _size_method(self, archive: ArchiveFileType):
-        pass
+        func = self.get_val(archive)
+        return func._size_method(archive)
 
     def _is(self, archive: ArchiveFileType): ...
 

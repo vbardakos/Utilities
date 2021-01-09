@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 from collections import UserDict
 from typing import Union
+from Utilities.__conf import _ArchTypeConf
 
 
 class ArchiveFileType(ABC):
@@ -14,8 +15,24 @@ class ArchiveFileType(ABC):
         self.new = None
         self.fmt = None
 
+    @property
+    def mode_info(self):
+        return _ArchTypeConf
+
 
 class ArchiverType(ABC):
+
+    def __init__(self):
+        self._r = 'r'
+        self._w = 'w'
+
+    def set_read_mode(self, option: str):
+        if option in _ArchTypeConf['read'].keys():
+            self._r = option
+        else:
+            raise ValueError(f"'{option}' is not an available mode. "
+                             f"Use mode_info to get information about "
+                             f"the available modes")
 
     def extract(self, archive: ArchiveFileType):
         return self._extract_method(archive)
@@ -28,6 +45,12 @@ class ArchiverType(ABC):
 
     def size(self, archive: ArchiveFileType):
         return self._size_method(archive)
+
+    @property
+    def read_mode(self): return self._r
+
+    @property
+    def write_mode(self): return self._w
 
     @abstractmethod
     def _size_method(self, archive: ArchiveFileType): ...
