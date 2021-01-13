@@ -1,7 +1,6 @@
 import os
 from os import PathLike
-from functools import wraps
-from typing import Optional, List, Union, Any
+from typing import Optional, List, Union, Any, Dict
 from Utilities.input.archive.factory import factory
 from Utilities.base import ArchiveFileType
 
@@ -17,33 +16,20 @@ class FileException(Exception):
         return f"Path '{self.file}' {self.message}"
 
 
-class ArchiveFile(ArchiveFileType):
+class _ArchFileFormat(ArchiveFileType):
 
-    def __init__(self, file: Union[str, PathLike],
-                 pwd: Optional[Any] = None):
-        super(ArchiveFile, self).__init__()
+    def __init__(self, path):
+        super(_ArchFileFormat, self).__init__()
+        self.pth = path
 
-        if os.path.isfile(file):
-            self.pth = os.path.abspath(file)
-        else:
-            raise FileException(file)
-
-        self.new = os.path.abspath(os.path.join(self.pth, os.pardir))
-        self.pwd = pwd
-
-    def extractor(func):
+    @classmethod
+    def extractor(cls, func):
         """ Method Extraction Decorator """
-        @wraps(func)
         def wrapper(self, *args, **kwargs):
             func(self, *args, **kwargs)
-            extractor = factory[self.format]
-            method = func.__name__
-            return extractor.__getattribute__(method)(self)
+            arch = self._get_archiver
+            return arch.__getattribute__(func.__name__)(self)
         return wrapper
-
-    def set_read_mode(self, option: bool):
-        extractor = factory[self.format]
-        return extractor.set_read_mode(option)
 
     @property
     def format(self) -> str:
@@ -57,19 +43,47 @@ class ArchiveFile(ArchiveFileType):
         return self.fmt
 
     @property
-    def supported_formats(self) -> str:
-        return str(factory)
+    def _get_archiver(self):
+        return factory[self.format]
 
-    @extractor
+
+class ArchiveFile(_ArchFileFormat):
+
+    def __init__(self, file: Union[str, PathLike],
+                 pwd: Optional[Any] = None):
+        if os.path.isfile(file):
+            self.pth = os.path.abspath(file)
+        else:
+            raise FileException(file)
+        self.new = os.path.abspath(os.path.join(self.pth, os.pardir))
+        self.pwd = pwd
+        super(ArchiveFile, self).__init__(self.pth)
+
+    def set_read_mode(self, option: bool):
+        extractor = factory[self.format]
+        return extractor.set_read_mode(option)
+
+    @_ArchFileFormat.extractor
     def extract(self, members: Optional[List[str]] = None,
                 to_path: Optional[PathLike] = None):
         self.mbr = members
         self.new = to_path if to_path else self.new
 
     @property
-    @extractor
-    def inspect(self): return None
+    def supported_formats(self) -> str:
+        return str(factory)
 
     @property
-    @extractor
-    def size(self): return None
+    def mode_info(self):
+        arch = self._get_archiver
+        return arch.mode_info
+
+    @property
+    @_ArchFileFormat.extractor
+    def inspect(self) -> Union[list, None]:
+        return None
+
+    @property
+    @_ArchFileFormat.extractor
+    def size(self) -> Union[Dict[str, int], None]:
+        return None

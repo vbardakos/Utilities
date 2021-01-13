@@ -1,4 +1,4 @@
-from Utilities.base import FactoryType, ArchiveFileType, ArchiverType
+from Utilities.base import FactoryType
 from typing import Union
 import json
 
@@ -22,37 +22,4 @@ class ArchiveFactory(FactoryType):
         return json.dumps(dict(dict_gen), indent=2)
 
 
-factory: ArchiveFactory
-
-
-class ArchiveFinder(ArchiverType):
-    """ It finds the proper archiver class """
-
-    def get_val(self, archive: ArchiveFileType) -> ArchiverType:
-        return factory[self.get_key(archive)]
-
-    @staticmethod
-    def get_key(archive: ArchiveFileType) -> str:
-        for item, func in factory.items():
-            if func.combatible_with(archive.pth):
-                return item
-        else:
-            raise KeyError(f"{archive.pth} Format is not compatible")
-
-    def _extract_method(self, archive: ArchiveFileType):
-        func = self.get_val(archive)
-        return func._extract_method(archive)
-
-    def _inspect_method(self, archive: ArchiveFileType):
-        func = self.get_val(archive)
-        return func._inspect_method(archive)
-
-    def _size_method(self, archive: ArchiveFileType):
-        func = self.get_val(archive)
-        return func._size_method(archive)
-
-    def _is(self, archive: ArchiveFileType): ...
-
-
 factory = ArchiveFactory()
-factory.register(None, ArchiveFinder())

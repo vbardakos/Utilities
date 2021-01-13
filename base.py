@@ -4,6 +4,32 @@ from typing import Union
 from Utilities.__conf import _ArchTypeConf
 
 
+class FactoryType(UserDict, ABC):
+
+    def __setitem__(self, key: Union[str, None], value: object):
+        if self._evaluate(value):
+            super(FactoryType, self).__setitem__(key, value)
+        else:
+            raise ValueError(f"{value} is not supported")
+
+    def __getitem__(self, key):
+        if super(FactoryType, self).__contains__(key):
+            return super(FactoryType, self).__getitem__(key)
+        else:
+            raise KeyError(f"{key} is not supported")
+
+    def _evaluate(self, value: object):
+        """ evaluates which objects are supported """
+        if hasattr(self, '_instance'):
+            return isinstance(value, self._instance)
+        else:
+            return hasattr(value, '__dict__')
+
+    def _set_evaluator(self, *obj):
+        """ sets objects in the evaluation """
+        self._instance = obj
+
+
 class ArchiveFileType(ABC):
 
     @abstractmethod
@@ -14,10 +40,6 @@ class ArchiveFileType(ABC):
         self.mbr = None
         self.new = None
         self.fmt = None
-
-    @property
-    def mode_info(self):
-        return _ArchTypeConf
 
 
 class ArchiverType(ABC):
@@ -47,10 +69,16 @@ class ArchiverType(ABC):
         return self._size_method(archive)
 
     @property
-    def read_mode(self): return self._r
+    def read_mode(self) -> str:
+        return self._r
 
     @property
-    def write_mode(self): return self._w
+    def write_mode(self) -> str:
+        return self._w
+
+    @property
+    def mode_info(self):
+        return _ArchTypeConf
 
     @abstractmethod
     def _size_method(self, archive: ArchiveFileType): ...
@@ -65,27 +93,30 @@ class ArchiverType(ABC):
     def _is(self, archive: ArchiveFileType): ...
 
 
-class FactoryType(UserDict, ABC):
+class ArchiveFindType(ArchiverType):
+    """ Subclass which points to the appropriate ArchiverType class """
 
-    def __setitem__(self, key: Union[str, None], value: object):
-        if self._evaluate(value):
-            super(FactoryType, self).__setitem__(key, value)
-        else:
-            raise ValueError(f"{value} is not supported")
+    def __init__(self, factory: FactoryType):
+        super(ArchiveFindType, self).__init__()
+        self.factory = factory
 
-    def __getitem__(self, key):
-        if super(FactoryType, self).__contains__(key):
-            return super(FactoryType, self).__getitem__(key)
-        else:
-            raise KeyError(f"{key} Format is not supported")
+    @abstractmethod
+    def get_val(self, archive: ArchiveFileType): ...
 
-    def _evaluate(self, value: object):
-        """ evaluates which objects are supported """
-        if hasattr(self, '_instance'):
-            return isinstance(value, self._instance)
-        else:
-            return hasattr(value, '__dict__')
+    @abstractmethod
+    def get_key(self, archive: ArchiveFileType): ...
 
-    def _set_evaluator(self, *obj):
-        """ sets objects in the evaluation """
-        self._instance = obj
+    def _extract_method(self, archive: ArchiveFileType):
+        func = self.get_val(archive)
+        return func._extract_method(archive)
+
+    def _inspect_method(self, archive: ArchiveFileType):
+        func = self.get_val(archive)
+        return func._inspect_method(archive)
+
+    def _size_method(self, archive: ArchiveFileType):
+        func = self.get_val(archive)
+        return func._size_method(archive)
+
+    def _is(self, archive: ArchiveFileType): ...
+
