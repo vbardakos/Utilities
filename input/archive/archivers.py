@@ -14,7 +14,7 @@ class ArchiveFinder(ArchiveFindType):
 
     def get_key(self, archive: ArchiveFileType) -> str:
         for item, func in self.factory.items():
-            if func.combatible_with(archive.pth):
+            if func.combatible_with(archive):
                 return item
         else:
             raise KeyError(f"{archive.pth} Format is not compatible")
@@ -22,7 +22,12 @@ class ArchiveFinder(ArchiveFindType):
 
 class GZipper(ArchiveFindType):
 
-    def get_val(self, archive: ArchiveFileType): ...
+    def get_val(self, archive: ArchiveFileType):
+        for func in self.factory.values():
+            if func.compatible_with(archive):
+                return func
+        else:
+            raise ValueError(f"Format is not compatible")
 
     def get_key(self, _ignore: ArchiveFileType):
         for key in self.factory:
@@ -35,7 +40,7 @@ class GZipper(ArchiveFindType):
 
             key = self.get_key(_ignore)
             warnings.warn(f"'{key}' DOES NOT support '{func.__name__}()' method. "
-                          f"Try to extract first.",
+                          f"Try 'extract()' method first.",
                           RuntimeWarning, stacklevel=4)
         return wrapper
 
@@ -46,8 +51,22 @@ class GZipper(ArchiveFindType):
     def _inspect_method(self, archive: ArchiveFileType) -> None: ...
 
     def _extract_method(self, archive: ArchiveFileType):
-        with gzip.open(archive.pth, self._r) as f:
-            return f.read()
+        import gzip
+        import shutil
+
+        compressed = '.'.join(archive.pth.split('.')[:-1])
+        with gzip.open(archive.pth, self._r) as f_in:
+            with open(compressed, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        archive.pth = compressed
+        try:
+            super(GZipper, self)._extract_method(archive)
+            os.remove(compressed)
+        except ValueError:
+            if os.path.dirname(archive.pth) != archive.new:
+                new_path = os.path.join(archive.new, os.path.basename(archive.pth))
+                shutil.move(archive.pth, new_path)
 
     def _is(self, archive: ArchiveFileType):
         with gzip.GzipFile(archive.pth, self._r) as f:
@@ -95,12 +114,15 @@ class TarZipper(ArchiverType):
             return f.getnames()
 
     def _extract_method(self, archive: ArchiveFileType):
-        import warnings
+        if archive.pwd:
+            import warnings
 
-        warnings.warn(f"{self.__class__.__name__} does not use password", RuntimeWarning, stacklevel=4)
+            warnings.warn(f"{self.__class__.__name__} does not use password",
+                          RuntimeWarning, stacklevel=4)
+
         members = self._mbr_to_tar(archive.mbr)
         with tarfile.TarFile(archive.pth, self._r) as f:
-            f.extractall(path=archive.pth, members=list(members))
+            f.extractall(path=archive.new, members=list(members))
 
     def _is(self, archive: ArchiveFileType):
         return tarfile.is_tarfile(archive.pth)
@@ -109,6 +131,6 @@ class TarZipper(ArchiverType):
     def _mbr_to_tar(members) -> List[tarfile.TarInfo]:
         if isinstance(members, (list, tuple)):
             for m in members:
-                yield tarfile.TarInfo(os.path.abspath(m))
+                yield tarfile.TarInfo(m)
         else:
             return None

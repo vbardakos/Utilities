@@ -3,9 +3,9 @@ GENERAL INFO
 ```yaml
 Package:  Utilities
 Author:   vbar
-Version:  0.1.1
+Version:  0.1.2
 Created:  08.02.2021
-Abstract: This package integrates and simplifies various utilities
+Abstract: Integration and Simplification of Various Utilities
 ```
 
 EXAMPLE
@@ -61,3 +61,16 @@ Refactored Classes
     2. ArchiveFile(_ArchFileFormat)
 
 Supported Formats: zip, tar, gunzip
+
+
+# VERSION 0.1.2
+---------------
+Full support:
+- gunzip format & recursive extraction of files
+
+Refactored:
+- ArchiverType
+
+Update methods:
+- TarZipper(ArchiverType)
+- GZipper(ArchiveFindType)

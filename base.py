@@ -48,14 +48,6 @@ class ArchiverType(ABC):
         self._r = 'r'
         self._w = 'w'
 
-    def set_read_mode(self, option: str):
-        if option in _ArchTypeConf['read'].keys():
-            self._r = option
-        else:
-            raise ValueError(f"'{option}' is not an available mode. "
-                             f"Use mode_info to get information about "
-                             f"the available modes")
-
     def extract(self, archive: ArchiveFileType):
         return self._extract_method(archive)
 
@@ -68,16 +60,23 @@ class ArchiverType(ABC):
     def size(self, archive: ArchiveFileType):
         return self._size_method(archive)
 
-    @property
-    def read_mode(self) -> str:
-        return self._r
+    def _set_mode(self, option: str, read_or_write: bool):
+        mode = 'read' if read_or_write else 'write'
+        if option in _ArchTypeConf[mode].keys():
+            if read_or_write:
+                self._r = option
+            else:
+                self._w = option
+        else:
+            raise ValueError(f"'{option}' is not an available mode. "
+                             f"Use supported_modes to get information about "
+                             f"the available modes")
+
+    def _get_mode(self, read_or_write: bool) -> str:
+        return self._r if read_or_write else self._w
 
     @property
-    def write_mode(self) -> str:
-        return self._w
-
-    @property
-    def mode_info(self):
+    def _mode_info(self):
         return _ArchTypeConf
 
     @abstractmethod
