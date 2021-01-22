@@ -1,7 +1,7 @@
+from configparser import ConfigParser
 from abc import abstractmethod, ABC
 from collections import UserDict
 from typing import Union
-from Utilities.__conf import _ArchTypeConf
 
 
 class FactoryType(UserDict, ABC):
@@ -47,6 +47,8 @@ class ArchiverType(ABC):
     def __init__(self):
         self._r = 'r'
         self._w = 'w'
+        self._c = ConfigParser()
+        self._c.read('.config.ini')
 
     def extract(self, archive: ArchiveFileType):
         return self._extract_method(archive)
@@ -62,7 +64,7 @@ class ArchiverType(ABC):
 
     def _set_mode(self, option: str, read_or_write: bool):
         mode = 'read' if read_or_write else 'write'
-        if option in _ArchTypeConf[mode].keys():
+        if option in self._c[mode]:
             if read_or_write:
                 self._r = option
             else:
@@ -77,7 +79,11 @@ class ArchiverType(ABC):
 
     @property
     def _mode_info(self):
-        return _ArchTypeConf
+        info = {
+            'read': dict(self._c['read'].items()),
+            'write': dict(self._c['read'].items()),
+        }
+        return info
 
     @abstractmethod
     def _size_method(self, archive: ArchiveFileType): ...

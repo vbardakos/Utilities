@@ -13,17 +13,28 @@ EXAMPLE
 ```python
 from Utilities.input.archive import File
 
+
 my_path = 'data/archive.zip'
 my_file = File(my_path)
+ 
+my_file.format 
+# `data/archive.zip` format (i.e. 'ZIP')
 
-my_file.format  # `data/archive.zip` format (i.e. 'ZIP')
-my_file.supported_formats  # File() class supported formats
-my_file.inspect  # `data/archive.zip` member files' inspection
-my_file.size  # `data/archive.zip` member files' size
+my_file.supported_formats
+# File() class supported formats
 
-# extracts `data/archive.zip` members (default: None extracts all members)
-# to `to_path` (default: None extract @ `data/`)
-my_file.extract(members=['file1.txt', 'path/file2.csv'], to_path='data/')
+my_file.inspect
+# `data/archive.zip` member files' inspection
+
+my_file.size
+# `data/archive.zip` member files' size
+
+my_file.extract()
+# extracts to current path
+
+files_to_extract = ['file1.txt', 'path/file2.csv']
+my_file.extract(members=files_to_extract, to_path='new_data/')
+# extracts archive members to new_data/
 ```
 
 HISTORY
@@ -74,3 +85,9 @@ Refactored:
 Update methods:
 - TarZipper(ArchiverType)
 - GZipper(ArchiveFindType)
+
+
+# VERSION 0.1.3
+---------------
+Replace
+- __conf.py with .config.ini includes read/write info
